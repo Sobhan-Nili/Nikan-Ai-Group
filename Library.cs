@@ -2,10 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.IO;
+using System.Drawing;
 using System.Threading.Tasks;
 using Microsoft.Kinect;
 using Microsoft.Kinect.VisualGestureBuilder;
 using Microsoft.Kinect.Face;
+using Microsoft.Kinect.Fusion;
+using System.Windows.Media.Imaging;
 using System.Speech.Synthesis;
 using Microsoft.Speech.AudioFormat;
 using Microsoft.Speech.Recognition;
@@ -631,15 +635,15 @@ namespace Robonic
                         }
                         if (FrameReceivedEvent != null)
                         {
-                            FrameReceivedEvent.Invoke(new FrameReceivedEventArgs(data));
+                            FrameReceivedEvent.Invoke(new ColorFrameReceivedEventArgs(data));
                         }
                     }
                 }
             }
-            public class FrameReceivedEventArgs : EventArgs
+            public class ColorFrameReceivedEventArgs : EventArgs
             {
                 System.Drawing.Bitmap FrameData;
-                public FrameReceivedEventArgs(System.Drawing.Bitmap data)
+                public ColorFrameReceivedEventArgs(System.Drawing.Bitmap data)
                 {
                     FrameData = data;
                 }
@@ -699,6 +703,260 @@ namespace Robonic
                 }
             }
         }
+        //InComplete
+        //public class InfraredStream : KinectIntraction
+        //{
+        //    InfraredFrameReader frame_reader; int frame_width, frame_hight; bool datastoration = false; IntPtr data;int size;int bytes_per_pixel;
+        //    public event RobonicEventHandler FrameReceivedEvent;
+        //    public InfraredStream()
+        //    {
+        //        if (Sensor.IsAvailable)
+        //        {
+        //            FrameDescription frame_describtion = Sensor.ColorFrameSource.FrameDescription;
+        //            bytes_per_pixel = (int)frame_describtion.BytesPerPixel;
+        //            frame_width = frame_describtion.Width;
+        //            frame_hight = frame_describtion.Height;
+        //            frame_reader = Sensor.InfraredFrameSource.OpenReader();
+        //            frame_reader.FrameArrived += Frame_reader_FrameArrived;
+        //        }
+        //        else
+        //        {
+        //            throw new RobonikException("Sensor is not available.");
+        //        }
+        //    }
+        //    private void Frame_reader_FrameArrived(object sender, InfraredFrameArrivedEventArgs e)
+        //    {
+        //        using (InfraredFrame frame = e.FrameReference.AcquireFrame())
+        //        {
+        //            if (frame != null && (datastoration || FrameReceivedEvent != null))
+        //            {
+        //                using (KinectBuffer buffer = frame.LockImageBuffer())
+        //                {
+        //                    frame.CopyFrameDataToIntPtr(data,buffer.Size);
+        //                    size = (int)buffer.Size;
+        //                }
+        //            }
+        //        }
+        //    }
+        //    unsafe void dataToBitmap()
+        //    {
+        //        ushort* frameData = (ushort*)data;
+        //        (byte[]) data 
+        //        // get the pointer to the bitmap's back buffer
+        //        float* backBuffer = (float*)this.infraredBitmap.BackBuffer;
+        //        byte[] byte_array = new byte[FrameHight * FrameWidth * bytes_per_pixel];
+        //        // process the infrared data
+        //        for (int i = 0; i < (size / bytes_per_pixel); ++i)
+        //        {
+        //            // since we are displaying the image as a normalized grey scale image, we need to convert from
+        //            // the ushort data (as provided by the InfraredFrame) to a value from [InfraredOutputValueMinimum, InfraredOutputValueMaximum]
+        //            byte_array[i] = Math.Min(1.0F, (((float)byte_array[i] / (float)ushort.MaxValue * 0.75F) * (1.0f - 0.1F)) + 0.1F);
+        //        }
+        //        if (FrameReceivedEvent != null)
+        //        {
+        //            FrameReceivedEvent.Invoke(new InfraredFrameReceivedEventArgs(data));
+        //        }
+        //    }
+        //    public void Capture(string path = "")
+        //    {
+        //        if (path != "")
+        //        {BitConverter.GetBytes(data)
+        //            BitmapToPngEncoder.CreatePng(ref)
+        //        }
+        //    }
+        //    public class InfraredFrameReceivedEventArgs : EventArgs
+        //    {
+        //        ushort[] FrameData;
+        //        public InfraredFrameReceivedEventArgs(ushort[] data)
+        //        {
+        //            FrameData = data;
+        //        }
+        //    }
+        //    public ushort[] GetData()
+        //    {
+        //        if (datastoration)
+        //        {
+        //            return data;
+        //        }
+        //        else
+        //        {
+        //            throw new RobonikException("Data storation is off.");
+        //        }
+        //    }
+        //    public int FrameWidth
+        //    {
+        //        get
+        //        {
+        //            return frame_width;
+        //        }
+        //    }
+        //    public int FrameHight
+        //    {
+        //        get
+        //        {
+        //            return frame_hight;
+        //        }
+        //    }
+        //    public bool DataStoration
+        //    {
+        //        get
+        //        {
+        //            return datastoration;
+        //        }
+        //        set
+        //        {
+        //            datastoration = value;
+        //        }
+        //    }
+        //    public bool Pause
+        //    {
+        //        get
+        //        {
+        //            if (frame_reader != null)
+        //            {
+        //                return frame_reader.IsPaused;
+        //            }
+        //            return false;
+        //        }
+        //        set
+        //        {
+        //            if (frame_reader != null)
+        //            {
+        //                frame_reader.IsPaused = value;
+        //            }
+        //        }
+        //    }
+        //}
+        static class BitmapToPngEncoder
+        {
+            public enum PictureSource
+            {
+                Depth = 0
+                , Color = 1
+                , Infrared = 2
+                , LongExposureInfrared = 3
+            }
+            public static void CreatePng(ref Bitmap bitmap, PictureSource picture_source, string folder_path = @"C:\Robonic\KinectCapture")
+            {
+                if (!Directory.Exists(folder_path))
+                {
+                    Directory.CreateDirectory(folder_path);
+                }
+                DateTime Now = DateTime.UtcNow;
+                folder_path = folder_path + "\\" + picture_source.ToString()+Now.Ticks.ToString();
+                BitmapEncoder encoder = new PngBitmapEncoder();
+                try
+                {
+                    using (FileStream fs = new FileStream(folder_path, FileMode.Create))
+                    {
+                        encoder.Save(fs);
+                    }
+                }
+                catch (IOException)
+                {
+                    throw new RobonikException("Unable to save image.");
+                }
+            }
+        }
+        //Completed
+        public class LongExposureInfraredStream : KinectIntraction
+        {
+            LongExposureInfraredFrameReader frame_reader; int frame_width, frame_hight; bool datastoration = false; ushort[] data;
+            public event RobonicEventHandler FrameReceivedEvent;
+            public LongExposureInfraredStream()
+            {
+                if (Sensor.IsAvailable)
+                {
+                    FrameDescription frame_describtion = Sensor.ColorFrameSource.FrameDescription;
+                    frame_width = frame_describtion.Width;
+                    frame_hight = frame_describtion.Height;
+                    frame_reader = Sensor.LongExposureInfraredFrameSource.OpenReader();
+                    frame_reader.FrameArrived += Frame_reader_FrameArrived;
+                }
+                else
+                {
+                    throw new RobonikException("Sensor is not available.");
+                }
+            }
+
+            private void Frame_reader_FrameArrived(object sender, LongExposureInfraredFrameArrivedEventArgs e)
+            {
+                using (LongExposureInfraredFrame frame = e.FrameReference.AcquireFrame())
+                {
+                    if (frame != null && (datastoration || FrameReceivedEvent != null))
+                    {
+                        ushort[] imagedata = null; frame.CopyFrameDataToArray(imagedata);
+                        if (FrameReceivedEvent != null)
+                        {
+                            FrameReceivedEvent.Invoke(new InfraredFrameReceivedEventArgs(data));
+                        }
+                    }
+                }
+            }
+            public class InfraredFrameReceivedEventArgs : EventArgs
+            {
+                ushort[] FrameData;
+                public InfraredFrameReceivedEventArgs(ushort[] data)
+                {
+                    FrameData = data;
+                }
+            }
+            public ushort[] GetData()
+            {
+                if (datastoration)
+                {
+                    return data;
+                }
+                else
+                {
+                    throw new RobonikException("Data storation is off.");
+                }
+            }
+            public int FrameWidth
+            {
+                get
+                {
+                    return frame_width;
+                }
+            }
+            public int FrameHight
+            {
+                get
+                {
+                    return frame_hight;
+                }
+            }
+            public bool DataStoration
+            {
+                get
+                {
+                    return datastoration;
+                }
+                set
+                {
+                    datastoration = value;
+                }
+            }
+            public bool Pause
+            {
+                get
+                {
+                    if (frame_reader != null)
+                    {
+                        return frame_reader.IsPaused;
+                    }
+                    return false;
+                }
+                set
+                {
+                    if (frame_reader != null)
+                    {
+                        frame_reader.IsPaused = value;
+                    }
+                }
+            }
+        }
+        //To Test
         public class BodyData : KinectIntraction
         {
             BodyFrameReader frame_reader; Body[] bodies; bool datastoration = false, calc_bone_id = false; public event RobonicEventHandler BodiesDataReceivedEvent;
@@ -1415,11 +1673,13 @@ namespace Robonic
                 }
             }
         }
-        //To Test
+        //To Test (Speach Recognition Incomplete)
         public class Audio : KinectIntraction
         {
             AudioBeamFrameReader frame_reader = null;List<VoiceData> voice_data;bool calc_voice = false;
             public event RobonicEventHandler VoiceReceivedEvent;
+            //bool1: be opened, is opened
+            List<Tuple<double,bool,bool>> voice_recognition_list;
             public struct VoiceData
             {
                 public double BeamAngle;public float Confidence;public double Bone;
@@ -1435,6 +1695,7 @@ namespace Robonic
                 if (Sensor.IsAvailable)
                 {
                     voice_data = new List<VoiceData>();
+                    voice_recognition_list = new List<Tuple<double, bool,bool>>();
                     frame_reader = Sensor.AudioSource.OpenReader();
                     frame_reader.FrameArrived += Frame_reader_FrameArrived;
                 }
@@ -1445,7 +1706,7 @@ namespace Robonic
             }
             private void Frame_reader_FrameArrived(object sender, AudioBeamFrameArrivedEventArgs e)
             {
-                if (calc_voice|| VoiceReceivedEvent != null)
+                if (calc_voice || VoiceReceivedEvent != null)
                 {
                     using (AudioBeamFrameList framelist = e.FrameReference.AcquireBeamFrames())
                     {
@@ -1459,6 +1720,14 @@ namespace Robonic
                                     IReadOnlyList<AudioBodyCorrelation> bodydata = subframe.AudioBodyCorrelations;
                                     foreach (var data in bodydata)
                                     {
+                                        //foreach (var item in voice_recognition_list)
+                                        //{
+                                        //    if ( && BodyData.IsBoneMatch(item.Item1, body_data.GetBoneLengthByTrackingId((int)data.BodyTrackingId)))
+                                        //    {
+                                        //        Stream stream = frame.AudioBeam.OpenInputStream();
+                                        //        KinectAudioStream converted_stream = new KinectAudioStream(stream);
+                                        //    }
+                                        //}
                                         int length = voice_data.Count;
                                         bool found = false;
                                         for (int i = 0; i < length; i++)
@@ -1535,6 +1804,28 @@ namespace Robonic
                     calc_voice = value;
                 }
             }
+            public void AddToSpeechRecognitionList(double bone)
+            {
+                foreach (var item in voice_recognition_list)
+                {
+                    if (BodyData.IsBoneMatch(bone,item.Item1))
+                    {
+                        return;
+                    }
+                }
+                voice_recognition_list.Add(new Tuple<double, bool, bool>(bone,true,false));
+            }
+            public void RemoveFromSpeechRecognitionList(double bone)
+            {
+                int length = voice_recognition_list.Count;
+                for (int i = 0; i < length; i++)
+                {
+                    if (voice_recognition_list[i].Item3 && BodyData.IsBoneMatch(bone, voice_recognition_list[i].Item1))
+                    {
+                        voice_recognition_list[i] = new Tuple<double, bool, bool>(voice_recognition_list[i].Item1, false,true);
+                    }
+                }
+            }
             public bool Pause
             {
                 get
@@ -1554,6 +1845,90 @@ namespace Robonic
                 }
             }
         }
+        internal class KinectAudioStream : Stream
+        {
+            private Stream kinect32BitStream;
+            public KinectAudioStream(Stream input)
+            {
+                this.kinect32BitStream = input;
+            }
+            public bool SpeechActive { get; set; }
+            public override bool CanRead
+            {
+                get { return true; }
+            }
+            public override bool CanWrite
+            {
+                get { return false; }
+            }
+            public override bool CanSeek
+            {
+                get { return false; }
+            }
+            public override long Position
+            {
+                get { return 0; }
+                set { throw new NotImplementedException(); }
+            }
+            public override long Length
+            {
+                get { throw new NotImplementedException(); }
+            }
+            public override void Flush()
+            {
+                throw new NotImplementedException();
+            }
+            public override long Seek(long offset, SeekOrigin origin)
+            {
+                return 0;
+            }
+            public override void SetLength(long value)
+            {
+                throw new NotImplementedException();
+            }
+            public override void Write(byte[] buffer, int offset, int count)
+            {
+                throw new NotImplementedException();
+            }
+            public override int Read(byte[] buffer, int offset, int count)
+            {
+                const int SampleSizeRatio = sizeof(float) / sizeof(short); // = 2. 
+                const int SleepDuration = 50;
+                int readcount = count * SampleSizeRatio;
+                byte[] kinectBuffer = new byte[readcount];
+                int bytesremaining = readcount;
+                while (bytesremaining > 0)
+                {
+                    if (!this.SpeechActive)
+                    {
+                        return 0;
+                    }
+                    int result = this.kinect32BitStream.Read(kinectBuffer, readcount - bytesremaining, bytesremaining);
+                    bytesremaining -= result;
+                    if (bytesremaining > 0)
+                    {
+                        System.Threading.Thread.Sleep(SleepDuration);
+                    }
+                }
+                for (int i = 0; i < count / sizeof(short); i++)
+                {
+                    float sample = BitConverter.ToSingle(kinectBuffer, i * sizeof(float));
+                    if (sample > 1.0f)
+                    {
+                        sample = 1.0f;
+                    }
+                    else if (sample < -1.0f)
+                    {
+                        sample = -1.0f;
+                    }
+                    short convertedSample = Convert.ToInt16(sample * short.MaxValue);
+                    byte[] local = BitConverter.GetBytes(convertedSample);
+                    Buffer.BlockCopy(local, 0, buffer, offset + (i * sizeof(short)), sizeof(short));
+                }
+                return count;
+            }
+        }
+        //Completed
         public static class GetBodyData
         {
             static BodyData data = null;
@@ -1684,9 +2059,122 @@ namespace Robonic
                 }
             }
         }
-        public class FindPath
+        //not completed
+        public class Face : KinectIntraction
         {
+            FaceFrameReader frame_reader;FaceFrameSource frame_source;public event RobonicEventHandler FaceDisappearedEvent;double bone;
+            public class FaceDisappearedEventArgs : EventArgs
+            {
+                double Bone;
+                public FaceDisappearedEventArgs(double bone)
+                {
+                    Bone = bone;
+                }
+            }
+            public Face(double user_bone)
+            {
+                bone = user_bone;
+                bool invoke = false;
+                if (Sensor.IsAvailable)
+                {
+                    ulong tracking_id = 0;
+                    try
+                    {
+                        tracking_id = (ulong)body_data.GetTrackingIdByBoneLength(bone);
+                    }
+                    catch (Exception)
+                    {
+                        invoke = true;
+                    }
+                    frame_source = new FaceFrameSource(Sensor, tracking_id,
+                    FaceFrameFeatures.FaceEngagement |
+                    FaceFrameFeatures.Glasses |
+                    FaceFrameFeatures.Happy |
+                    FaceFrameFeatures.LeftEyeClosed |
+                    FaceFrameFeatures.LookingAway |
+                    FaceFrameFeatures.MouthMoved |
+                    FaceFrameFeatures.MouthOpen |
+                    FaceFrameFeatures.RightEyeClosed |
+                    FaceFrameFeatures.RotationOrientation);
+                    frame_reader = frame_source.OpenReader();
+                    frame_source.TrackingIdLost += Frame_source_TrackingIdLost;
+                    frame_reader.FrameArrived += Frame_reader_FrameArrived;
+                    if (!frame_source.IsTrackingIdValid)
+                    {
+                        invoke = true;
+                    }
+                    if (invoke)
+                    {
+                        if (FaceDisappearedEvent != null)
+                        {
+                            FaceDisappearedEvent.Invoke(new FaceDisappearedEventArgs(bone));
+                        }
+                    }
+                }
+                else
+                {
+                    if (FaceDisappearedEvent!=null)
+                    {
+                        FaceDisappearedEvent.Invoke(new FaceDisappearedEventArgs(bone));
+                    }
+                }
+            }
+            void objects_disposer()
+            {
+                if (frame_reader != null)
+                {
+                    //if (frame_reader.FrameArrived != null)
+                    //{
 
+                    //}
+                }
+            }
+
+            private void Frame_source_TrackingIdLost(object sender, Microsoft.Kinect.Face.TrackingIdLostEventArgs e)
+            {
+                if (body_data.GetTrackingIdByBoneLength(bone) == -1)
+                {
+
+                }
+            }
+
+            private void Frame_reader_FrameArrived(object sender, FaceFrameArrivedEventArgs e)
+            {
+                throw new NotImplementedException();
+            }
+
+            BodyData body_data
+            {
+                get
+                {
+                    return GetBodyData.Get();
+                }
+            }
+            public void Cancel()
+            {
+                if (frame_reader != null)
+                {
+                    
+                }
+            }
+            public bool Pause
+            {
+                get
+                {
+                    if (frame_reader != null)
+                    {
+                        return frame_reader.IsPaused;
+                    }
+                    return false;
+                }
+                set
+                {
+                    if (frame_reader != null)
+                    {
+                        frame_reader.IsPaused = value;
+                    }
+                }
+            }
         }
     }
 }
